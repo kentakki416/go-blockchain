@@ -1,6 +1,9 @@
 package main
 
-import "time"
+import (
+	"fmt"
+	"time"
+)
 
 // ブロック構造体
 type Block struct {
@@ -14,12 +17,20 @@ type Block struct {
 func NewBlock(nonce int, previousHash string) *Block {
 	b := new(Block)
 	b.nonce = nonce
-	b.timestamp = time.Now().UnixNano()
 	b.previousHash = previousHash
+	b.timestamp = time.Now().UnixNano()
 	return b
+}
+
+// ブロックを出力
+func (b *Block) Print() {
+	fmt.Printf("nonce          %d\n", b.nonce)
+	fmt.Printf("previous_hash  %s\n", b.previousHash)
+	fmt.Printf("timestamp      %d\n", b.timestamp)
+	fmt.Printf("transactions   %s\n", b.transactions)
 }
 
 func main() {
 	b := NewBlock(0, "init hash")
-	fmt.Pringln(b)
+	b.Print()
 }
