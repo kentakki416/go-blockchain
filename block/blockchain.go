@@ -152,6 +152,24 @@ func (bc *Blockchain) Mining() bool {
 	return true
 }
 
+// ユーザーのvalueの合計値を取得
+func (bc *Blockchain) CalculateTotalAmount(blockchainAddress string) float32 {
+	var totalAmount float32 = 0.0
+	for _, b := range bc.chain {
+		for _, t := range b.transactions {
+			value := t.value
+			// 受け取りの場合
+			if blockchainAddress == t.recipientBlockchainAddress {
+				totalAmount += value
+			}
+			if blockchainAddress == t.senderBlockchainAddress {
+				totalAmount -= value
+			}
+		}
+	}
+	return totalAmount
+}
+
 // ------------------------------------------------------------------------------------------------
 type Transaction struct {
 	senderBlockchainAddress    string
@@ -195,4 +213,8 @@ func main() {
 	blockChain.AddTransaction("X", "Y", 5)
 	blockChain.Mining()
 	blockChain.Print()
+
+	fmt.Printf("my %.1f\n", blockChain.CalculateTotalAmount("my_blockchain_address"))
+	fmt.Printf("C %.1f\n", blockChain.CalculateTotalAmount("C"))
+	fmt.Printf("D %.1f\n", blockChain.CalculateTotalAmount("D"))
 }
