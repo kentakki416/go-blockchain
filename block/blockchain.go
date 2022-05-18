@@ -8,6 +8,8 @@ import (
 	"time"
 )
 
+const MINING_DIFFICULTY = 3
+
 // ブロック構造体
 type Block struct {
 	nonce        int
@@ -99,9 +101,42 @@ func (bc *Blockchain) AddTransaction(sender string, recipient string, value floa
 	bc.transactionPool = append(bc.transactionPool, t)
 }
 
+// Poolに溜まっているTransactionをコピーする
+func (bc *Blockchain) CopyTransactionPool() []*Transaction {
+	transactions := make([]*Transaction, 0)
+	for _, t := range bc.transactionPool {
+		transactions = append(transactions,
+			NewTransaction(t.senderBlockchainAddress, t.recipientBlockchainAddress, t.value),
+		)
+	}
+	return transactions
+}
+
+// NonceとpreviousHashとtransactionを使ってDifficultyを求める
+func (bc *Blockchain) ValidProof(nonce int, previousHash [32]byte, transactions []*Transaction, difficulty int) bool {
+	zeros := strings.Repeat("0", difficulty)
+	guessBlock := Block{nonce, previousHash, 0, transactions}
+
+	guessHashStr := fmt.Sprintf("%x", guessBlock.Hash())
+	// 解の左から３つ目が000ならばtrue
+	return guessHashStr[:difficulty] == zeros
+}
+
+// 解となるnonceを求める
+func (bc *Blockchain) ProofOfWork() int {
+	transactions := bc.CopyTransactionPool()
+	previousHash := bc.LastBlock().Hash()
+	nonce := 0
+	for !bc.ValidProof(nonce, previousHash, transactions, MINING_DIFFICULTY) {
+		nonce += 1
+	}
+
+	return nonce
+}
+
 // ------------------------------------------------------------------------------------------------
 type Transaction struct {
-	senderBLockchainAddress    string
+	senderBlockchainAddress    string
 	recipientBlockchainAddress string
 	value                      float32
 }
@@ -114,7 +149,7 @@ func NewTransaction(sender string, recipient string, value float32) *Transaction
 // Transactionの出力
 func (t *Transaction) Print() {
 	fmt.Printf("%s\n", strings.Repeat("-", 40))
-	fmt.Printf(" sender_blockchain_address    %s\n", t.senderBLockchainAddress)
+	fmt.Printf(" sender_blockchain_address    %s\n", t.senderBlockchainAddress)
 	fmt.Printf(" recipient_blockchain_address %s\n", t.recipientBlockchainAddress)
 	fmt.Printf(" value                        %.1f\n", t.value)
 }
@@ -125,7 +160,7 @@ func (t *Transaction) MarshalJSON() ([]byte, error) {
 		Recipient string  `json:"recipient_blockchain_address"`
 		Value     float32 `json:"value"`
 	}{
-		Sender:    t.senderBLockchainAddress,
+		Sender:    t.senderBlockchainAddress,
 		Recipient: t.recipientBlockchainAddress,
 		Value:     t.value,
 	})
@@ -137,9 +172,13 @@ func main() {
 	blockChain.AddTransaction("A", "B", 10)
 	// 最後のブロックのハッシュを生成
 	previousHash := blockChain.LastBlock().Hash()
-	blockChain.CreateBlock(5, previousHash)
+	nonce := blockChain.ProofOfWork()
+	blockChain.CreateBlock(nonce, previousHash)
 
+	blockChain.AddTransaction("C", "D", 2)
+	blockChain.AddTransaction("X", "Y", 5)
 	previousHash = blockChain.LastBlock().Hash()
-	blockChain.CreateBlock(2, previousHash)
+	nonce = blockChain.ProofOfWork()
+	blockChain.CreateBlock(nonce, previousHash)
 	blockChain.Print()
 }
