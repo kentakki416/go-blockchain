@@ -10,7 +10,7 @@
  
 "hoge"を動かすのに必要なライブラリなどを列挙する
  
-* huga 3.5.2
+* go 1.18
 * hogehuga 1.0.2
  
 # Installation
@@ -18,7 +18,8 @@
 Requirementで列挙したライブラリなどのインストール方法を説明する
  
 ```bash
-pip install huga_package
+go get github.com/btcsuite/btcutil/base58
+go get golang.org/x/crypto/ripemd160
 ```
  
 # Usage
