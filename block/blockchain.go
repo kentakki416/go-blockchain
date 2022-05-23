@@ -1,9 +1,11 @@
 package block
 
 import (
+	"crypto/ecdsa"
 	"crypto/sha256"
 	"encoding/json"
 	"fmt"
+	"go-blockchain/utils"
 	"log"
 	"strings"
 	"time"
@@ -51,10 +53,10 @@ func (b *Block) Hash() [32]byte {
 
 func (b *Block) MarshalJSON() ([]byte, error) {
 	return json.Marshal(struct {
-		Nonce        int            `json:nonce`
-		PreviousHash [32]byte       `json:previous_hash`
-		Timestamp    int64          `json:timestamp`
-		Transactions []*Transaction `json:transactions`
+		Nonce        int            `json:"nonce"`
+		PreviousHash [32]byte       `json:"previous_hash"`
+		Timestamp    int64          `json:"timestamp"`
+		Transactions []*Transaction `json:"transactions"`
 	}{
 		Nonce:        b.nonce,
 		PreviousHash: b.previousHash,
@@ -103,9 +105,33 @@ func (bc *Blockchain) Print() {
 }
 
 // TransactionPoolにTransactionを追加
-func (bc *Blockchain) AddTransaction(sender string, recipient string, value float32) {
+func (bc *Blockchain) AddTransaction(sender string, recipient string, value float32, senderPublicKey *ecdsa.PublicKey, s *utils.Signature) bool {
 	t := NewTransaction(sender, recipient, value)
-	bc.transactionPool = append(bc.transactionPool, t)
+	// 送り手がサーバー側であれば検証なしでTransactionを追加
+	if sender == MINING_SENDER {
+		bc.transactionPool = append(bc.transactionPool, t)
+		return true
+	}
+	// 普通のTransactionoの通信は検証を行う
+	if bc.VerifyTransactionSignature(senderPublicKey, s, t) {
+		// ユーザーは持っている仮想通貨が送る分を超過していないか
+		// if bc.CalculateTotalAmount(sender) < value {
+		// 	log.Println("ERROR: Not enough balance in a wallet")
+		// 	return false
+		// }
+		bc.transactionPool = append(bc.transactionPool, t)
+		return true
+	} else {
+		log.Println("ERROR: Verify Transaction Error")
+	}
+	return false
+}
+
+// 正しいTransactionか判定する
+func (bc *Blockchain) VerifyTransactionSignature(senderPublicKey *ecdsa.PublicKey, s *utils.Signature, t *Transaction) bool {
+	m, _ := json.Marshal(t)
+	h := sha256.Sum256([]byte(m))
+	return ecdsa.Verify(senderPublicKey, h[:], s.R, s.S)
 }
 
 // Poolに溜まっているTransactionをコピーする
@@ -144,7 +170,7 @@ func (bc *Blockchain) ProofOfWork() int {
 // マイニング処理
 func (bc *Blockchain) Mining() bool {
 	// MINING_SENDERがbc.blockchainAddressにMINING_REWARD送るトランザクション
-	bc.AddTransaction(MINING_SENDER, bc.blockchainAddress, MINING_REWARD)
+	bc.AddTransaction(MINING_SENDER, bc.blockchainAddress, MINING_REWARD, nil, nil)
 	nonce := bc.ProofOfWork()
 	previousHash := bc.LastBlock().Hash()
 	bc.CreateBlock(nonce, previousHash)
