@@ -28,6 +28,7 @@
           </button>
         </div>
     </header>
+
     <section class="text-gray-600 body-font relative">
       <div class="container px-5 py-12 mx-auto flex sm:flex-nowrap flex-wrap">
         <div class="lg:w-2/3 md:w-1/2 bg-gray-300 rounded-lg overflow-hidden sm:mr-10 p-10 flex items-end justify-start relative">
@@ -52,16 +53,16 @@
             <button class="inline-flex items-center bg-gray-100 border-0 py-1 px-3 focus:outline-none hover:bg-gray-200 rounded text-base mt-4 md:mt-0" id="reload_wallet">Reload Wallet</button>
           </p>
           <div class="relative mb-4">
-            <label for="name" class="leading-7 text-sm text-gray-600">Public Key</label>
+            <label for="public_key" class="leading-7 text-sm text-gray-600">Public Key</label>
             <textarea id="public_key" name="public_key" class="w-full bg-white rounded border border-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 h-8 text-base outline-none text-gray-700 py-1 px-3 resize-none leading-6 transition-colors duration-200 ease-in-out"></textarea>
             <!-- <input type="text" id="name" name="name" class="w-full bg-white rounded border border-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 text-base outline-none text-gray-700 py-1 px-3 leading-8 transition-colors duration-200 ease-in-out"> -->
           </div>
           <div class="relative mb-4">
-            <label for="email" class="leading-7 text-sm text-gray-600">Private Key</label>
+            <label for="private_key" class="leading-7 text-sm text-gray-600">Private Key</label>
             <textarea id="private_key" name="private_key" class="w-full bg-white rounded border border-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 h-8 text-base outline-none text-gray-700 py-1 px-3 resize-none leading-6 transition-colors duration-200 ease-in-out"></textarea>
           </div>
           <div class="relative mb-4">
-            <label for="message" class="leading-7 text-sm text-gray-600">Blockchain Address</label>
+            <label for="blockchain_address" class="leading-7 text-sm text-gray-600">Blockchain Address</label>
             <textarea id="blockchain_address" name="blockchain_address" class="w-full bg-white rounded border border-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 h-8 text-base outline-none text-gray-700 py-1 px-3 resize-none leading-6 transition-colors duration-200 ease-in-out"></textarea>
           </div>
           <p class="mt-3"></p>
@@ -117,5 +118,24 @@
           </span>
         </div>
     </footer>
+
+    <script>
+      // ページを読み込んだ際の処理
+      $(function() {
+        $.ajax({
+          url: "/wallet",
+          type: "POST",
+          success: function(response) {
+            $("#public_key").val(response["public_key"])
+            $("#private_key").val(response["private_key"])
+            $("#blockchain_address").val(response["blockchain_address"])
+            console.info(response)
+          },
+          error: function(error) {
+            console.error(error);
+          }
+        })
+      })
+    </script>
 </body>
 </html>
