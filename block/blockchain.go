@@ -54,12 +54,12 @@ func (b *Block) Hash() [32]byte {
 func (b *Block) MarshalJSON() ([]byte, error) {
 	return json.Marshal(struct {
 		Nonce        int            `json:"nonce"`
-		PreviousHash [32]byte       `json:"previous_hash"`
+		PreviousHash string         `json:"previous_hash"`
 		Timestamp    int64          `json:"timestamp"`
 		Transactions []*Transaction `json:"transactions"`
 	}{
 		Nonce:        b.nonce,
-		PreviousHash: b.previousHash,
+		PreviousHash: fmt.Sprintf("%x", b.previousHash),
 		Timestamp:    b.timestamp,
 		Transactions: b.transactions,
 	})
@@ -70,15 +70,25 @@ type Blockchain struct {
 	transactionPool   []*Transaction
 	chain             []*Block
 	blockchainAddress string //ブロックチェーンネットワークを構成する各nodeのアドレス
+	port              uint16
 }
 
 // ブロックチェーンの作成
-func NewBlockchain(blockchainAddress string) *Blockchain {
+func NewBlockchain(blockchainAddress string, port uint16) *Blockchain {
 	b := &Block{}
 	bc := new(Blockchain)
 	bc.blockchainAddress = blockchainAddress
 	bc.CreateBlock(0, b.Hash())
+	bc.port = port
 	return bc
+}
+
+func (bc *Blockchain) MarshalJSON() ([]byte, error) {
+	return json.Marshal(struct {
+		Blocks []*Block `json:"chains"`
+	}{
+		Blocks: bc.chain,
+	})
 }
 
 // ブロックチェーンの中にブロックを格納
