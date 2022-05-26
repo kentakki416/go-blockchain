@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 	"go-blockchain/utils"
 	"go-blockchain/wallet"
 	"html/template"
@@ -80,7 +79,19 @@ func (ws *WalletServer) CreateTransaction(w http.ResponseWriter, req *http.Reque
 			return
 		}
 
-		fmt.Println(*t.SenderPublicKey)
+		// publicKeyとprivateKeyを生成
+		publicKey := utils.PublicKeyFromString(*t.SenderPublicKey)
+		privateKey := utils.PrivateKeyFromString(*t.SenderPrivateKey, publicKey)
+		// valueを生成
+		value, err := strconv.ParseFloat(*t.Value, 32)
+		if err != nil {
+			log.Println("ERROR: parse error")
+			io.WriteString(w, string(utils.JsonStatus("fail")))
+			return
+		}
+		value32 := float32(value)
+
+		w.Header().Add("Content-Type", "application/json")
 
 	default:
 		w.WriteHeader(http.StatusBadRequest)
