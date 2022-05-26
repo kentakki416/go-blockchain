@@ -24,7 +24,7 @@ type WalletServer struct {
 
 // Walletの作成
 func NewWalletServer(port uint16, gateway string) *WalletServer {
-	return &WalletServer{port: port, gateway: gateway}
+	return &WalletServer{port, gateway}
 }
 
 func (ws *WalletServer) Port() uint16 {
@@ -70,7 +70,7 @@ func (ws *WalletServer) CreateTransaction(w http.ResponseWriter, req *http.Reque
 		var t wallet.TransactionRequest
 		err := decoder.Decode(&t)
 		if err != nil {
-			log.Printf("ERROR: %v ", err)
+			log.Printf("ERROR: %v", err)
 			io.WriteString(w, string(utils.JsonStatus("fail")))
 			return
 		}
@@ -95,8 +95,8 @@ func (ws *WalletServer) CreateTransaction(w http.ResponseWriter, req *http.Reque
 
 		w.Header().Add("Content-Type", "application/json")
 		// transactionの生成
-		transaction := wallet.NewTransaction(privateKey, publicKey, *t.SenderBlockchainAddress,
-			*t.RecipientBlockchainAddress, value32)
+		transaction := wallet.NewTransaction(privateKey, publicKey,
+			*t.SenderBlockchainAddress, *t.RecipientBlockchainAddress, value32)
 		// signatureの生成
 		signature := transaction.GenerateSignature()
 		signatureStr := signature.String()
