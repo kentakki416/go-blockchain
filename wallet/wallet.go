@@ -124,7 +124,7 @@ func (t *Transaction) GenerateSignature() *utils.Signature {
 	return &utils.Signature{r, s}
 }
 
-func (t Transaction) MarshalJSON() ([]byte, error) {
+func (t *Transaction) MarshalJSON() ([]byte, error) {
 	return json.Marshal(struct {
 		Sender    string  `json:"sender_blockchain_address"`
 		Recipient string  `json:"recipient_blockchain_address"`
