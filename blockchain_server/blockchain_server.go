@@ -140,10 +140,28 @@ func (bcs *BlockchainServer) Mine(w http.ResponseWriter, req *http.Request) {
 	}
 }
 
+// マイニング処理を自動化するAPI
+func (bcs *BlockchainServer) StartMine(w http.ResponseWriter, req *http.Request) {
+	switch req.Method {
+	case http.MethodGet:
+		bc := bcs.GetBlockchain()
+		bc.StartMining()
+
+		m := utils.JsonStatus("success")
+		w.Header().Add("Content-Type", "application/json")
+		io.WriteString(w, string(m))
+
+	default:
+		log.Println("ERROR: Invaild HTTP Method")
+		w.WriteHeader(http.StatusBadRequest)
+	}
+}
+
 // サーバーの立ち上げ
 func (bcs *BlockchainServer) Run() {
 	http.HandleFunc("/", bcs.GetChain)
 	http.HandleFunc("/transactions", bcs.Transactions)
 	http.HandleFunc("/mine", bcs.Mine)
+	http.HandleFunc("/mine/start", bcs.StartMine)
 	log.Fatal(http.ListenAndServe("0.0.0.0:"+strconv.Itoa(int(bcs.Port())), nil))
 }

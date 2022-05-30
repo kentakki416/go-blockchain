@@ -8,6 +8,7 @@ import (
 	"go-blockchain/utils"
 	"log"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -15,6 +16,7 @@ const (
 	MINING_DIFFICULTY = 3
 	MINING_SENDER     = "THE BLOCKCHAIN"
 	MINING_REWARD     = 1.0
+	MINING_TIMER_SEC  = 20
 )
 
 // ブロック構造体
@@ -71,6 +73,7 @@ type Blockchain struct {
 	chain             []*Block
 	blockchainAddress string //ブロックチェーンネットワークを構成する各nodeのアドレス
 	port              uint16
+	mux               sync.Mutex
 }
 
 // ブロックチェーンの作成
@@ -195,6 +198,14 @@ func (bc *Blockchain) ProofOfWork() int {
 
 // マイニング処理
 func (bc *Blockchain) Mining() bool {
+	// マイニング中に他のマイニング処理が実行されないようにロック
+	bc.mux.Lock()
+	defer bc.mux.Unlock()
+
+	if len(bc.transactionPool) == 0 {
+		return false
+	}
+
 	// MINING_SENDERがbc.blockchainAddressにMINING_REWARD送るトランザクション
 	bc.AddTransaction(MINING_SENDER, bc.blockchainAddress, MINING_REWARD, nil, nil)
 	nonce := bc.ProofOfWork()
@@ -202,6 +213,12 @@ func (bc *Blockchain) Mining() bool {
 	bc.CreateBlock(nonce, previousHash)
 	log.Println("action=mining, status=success")
 	return true
+}
+
+// Mining()を自動で呼び出す処理
+func (bc *Blockchain) StartMining() {
+	bc.Mining()
+	_ = time.AfterFunc(time.Second*MINING_TIMER_SEC, bc.StartMining)
 }
 
 // ユーザーのvalueの合計値を取得
