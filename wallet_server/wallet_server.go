@@ -132,12 +132,14 @@ func (ws *WalletServer) WalletAmount(w http.ResponseWriter, req *http.Request) {
 		blockchainAddress := req.URL.Query().Get("blockchain_address")
 		endpoint := fmt.Sprintf("%s/amount", ws.Gateway())
 
+		// GETリクエストを送信
 		client := &http.Client{}
 		bcsReq, _ := http.NewRequest("GET", endpoint, nil)
 		q := bcsReq.URL.Query()
 		q.Add("blockchain_address", blockchainAddress)
 		bcsReq.URL.RawQuery = q.Encode()
 
+		// GETリクエストから値を取得
 		bcsResp, err := client.Do(bcsReq)
 		if err != nil {
 			log.Printf("ERROR: %v", err)
@@ -158,7 +160,7 @@ func (ws *WalletServer) WalletAmount(w http.ResponseWriter, req *http.Request) {
 
 			m, _ := json.Marshal(struct {
 				Message string  `json:"message"`
-				Amount  float32 `json:amount"`
+				Amount  float32 `json:"amount"`
 			}{
 				Message: "success",
 				Amount:  bar.Amount,
