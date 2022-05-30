@@ -291,3 +291,17 @@ func (tr *TransactionRequest) Validate() bool {
 	}
 	return true
 }
+
+// --------------------------------------------------------------------------------------------------------------------
+// 仮想通貨の合計値
+type AmountResponse struct {
+	Amount float32 `json:"amount"`
+}
+
+func (ar AmountResponse) MarshalJSON() ([]byte, error) {
+	return json.Marshal(struct {
+		Amount float32 `json:"amount"`
+	}{
+		Amount: ar.Amount,
+	})
+}
