@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"crypto/ecdsa"
 	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"go-blockchain/utils"
@@ -87,6 +88,29 @@ func (b *Block) MarshalJSON() ([]byte, error) {
 	})
 }
 
+func (b *Block) UnmarshalJSON(data []byte) error {
+	var previousHash string
+	v := &struct {
+		Timestamp    *int64          `json:"timestamp"`
+		Nonce        *int            `josn:"nonce"`
+		PreviousHash *string         `json:"previous_hash"`
+		Transactions *[]*Transaction `json:"transactions"`
+	}{
+		Timestamp:    &b.timestamp,
+		Nonce:        &b.nonce,
+		PreviousHash: &previousHash,
+		Transactions: &b.transactions,
+	}
+	if err := json.Unmarshal(data, &v); err != nil {
+		return err
+	}
+	// stringからbyteに変換する
+	ph, _ := hex.DecodeString(*v.PreviousHash)
+	// Unmarshalの際にbyteに変換して格納する
+	copy(b.previousHash[:], ph[:32])
+	return nil
+}
+
 // ------------------------------------------------------------------------------------------
 type Blockchain struct {
 	transactionPool   []*Transaction
@@ -106,6 +130,10 @@ func NewBlockchain(blockchainAddress string, port uint16) *Blockchain {
 	bc.CreateBlock(0, b.Hash())
 	bc.port = port
 	return bc
+}
+
+func (bc *Blockchain) Chain() []*Block {
+	return bc.chain
 }
 
 func (bc *Blockchain) Run() {
@@ -141,12 +169,26 @@ func (bc *Blockchain) ClearTransactionPool() {
 	bc.transactionPool = bc.transactionPool[:0]
 }
 
+// marshalをカスタマイズ
 func (bc *Blockchain) MarshalJSON() ([]byte, error) {
 	return json.Marshal(struct {
-		Blocks []*Block `json:"chains"`
+		Blocks []*Block `json:"chain"`
 	}{
 		Blocks: bc.chain,
 	})
+}
+
+// unmarshalをカスタマイズ
+func (bc *Blockchain) UnmarshalJSON(data []byte) error {
+	v := &struct {
+		Blocks *[]*Block `json:"chain"`
+	}{
+		Blocks: &bc.chain,
+	}
+	if err := json.Unmarshal(data, &v); err != nil {
+		return err
+	}
+	return nil
 }
 
 // ブロックチェーンの中にブロックを格納
@@ -312,6 +354,7 @@ func (bc *Blockchain) CalculateTotalAmount(blockchainAddress string) float32 {
 	return totalAmount
 }
 
+// Blockchainの検証
 func (bc *Blockchain) ValidChain(chain []*Block) bool {
 	preBlock := chain[0]
 	currentIndex := 1
@@ -328,6 +371,37 @@ func (bc *Blockchain) ValidChain(chain []*Block) bool {
 		currentIndex += 1
 	}
 	return true
+}
+
+// ブロックチェーンが最も長いものか判定する
+func (bc *Blockchain) ResolveConflicts() bool {
+	var longestChain []*Block = nil
+	maxLength := len(bc.chain)
+
+	for _, n := range bc.neighbors {
+		endpoint := fmt.Sprintf("http://%s/chain", n)
+		resp, _ := http.Get(endpoint)
+		if resp.StatusCode == 200 {
+			var bcResp Blockchain
+			decoder := json.NewDecoder(resp.Body)
+			_ = decoder.Decode(&bcResp)
+
+			chain := bcResp.Chain()
+
+			if len(chain) > maxLength && bc.ValidChain(chain) {
+				maxLength = len(chain)
+				longestChain = chain
+			}
+		}
+	}
+
+	if longestChain != nil {
+		bc.chain = longestChain
+		log.Printf("Resolve confilicts replaced")
+		return true
+	}
+	log.Printf("Resolve conficts not replaced")
+	return false
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -360,6 +434,22 @@ func (t *Transaction) MarshalJSON() ([]byte, error) {
 		Recipient: t.recipientBlockchainAddress,
 		Value:     t.value,
 	})
+}
+
+func (t *Transaction) UnmarshalJSON(data []byte) error {
+	v := &struct {
+		Sender    *string  `json:"sender_blockchain_address"`
+		Recipient *string  `json:"recipient_blockchain_address"`
+		Value     *float32 `json:"value"`
+	}{
+		Sender:    &t.senderBlockchainAddress,
+		Recipient: &t.recipientBlockchainAddress,
+		Value:     &t.value,
+	}
+	if err := json.Unmarshal(data, &v); err != nil {
+		return err
+	}
+	return nil
 }
 
 // --------------------------------------------------------------------------------------------------------------------
