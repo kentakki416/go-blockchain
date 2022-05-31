@@ -1,12 +1,14 @@
 package block
 
 import (
+	"bytes"
 	"crypto/ecdsa"
 	"crypto/sha256"
 	"encoding/json"
 	"fmt"
 	"go-blockchain/utils"
 	"log"
+	"net/http"
 	"strings"
 	"sync"
 	"time"
@@ -117,8 +119,14 @@ func (bc *Blockchain) StartSyncNeighbors() {
 	_ = time.AfterFunc(time.Second*BLOCKCHAIN_NEIGHBOR_SYNC_TIME_SEC, bc.StartSyncNeighbors)
 }
 
+// BlockchainのTransactionPoolを取得する処理
 func (bc *Blockchain) TransactionPool() []*Transaction {
 	return bc.transactionPool
+}
+
+// BlockchainのTransactionPoolを空にする
+func (bc *Blockchain) ClearTransactionPool() {
+	bc.transactionPool = bc.transactionPool[:0]
 }
 
 func (bc *Blockchain) MarshalJSON() ([]byte, error) {
@@ -135,6 +143,14 @@ func (bc *Blockchain) CreateBlock(nonce int, previousHash [32]byte) *Block {
 	bc.chain = append(bc.chain, b)
 	// ブロックをブロックチェーンに追加した際にPoolを空にする
 	bc.transactionPool = []*Transaction{}
+
+	for _, n := range bc.neighbors {
+		endpoint := fmt.Sprintf("http://%s/transactions", n)
+		client := &http.Client{}
+		req, _ := http.NewRequest("DELETE", endpoint, nil)
+		resp, _ := client.Do(req)
+		log.Printf("%v", resp)
+	}
 	return b
 }
 
@@ -155,10 +171,24 @@ func (bc *Blockchain) Print() {
 func (bc *Blockchain) CreateTransaction(sender string, recipient string, value float32,
 	senderPublicKey *ecdsa.PublicKey, s *utils.Signature) bool {
 	isTransacted := bc.AddTransaction(sender, recipient, value, senderPublicKey, s)
-	return isTransacted
 
-	// TODO:
-	// Sync
+	if isTransacted {
+		for _, n := range bc.neighbors {
+			publicKeyStr := fmt.Sprintf("%064x%064x", senderPublicKey.X.Bytes(),
+				senderPublicKey.Y.Bytes())
+			signatureStr := s.String()
+			bt := &TransactionRequest{
+				&sender, &recipient, &publicKeyStr, &value, &signatureStr}
+			m, _ := json.Marshal(bt)
+			buf := bytes.NewBuffer(m)
+			endpoint := fmt.Sprintf("http://%s/transactions", n)
+			client := &http.Client{}
+			req, _ := http.NewRequest("PUT", endpoint, buf)
+			resp, _ := client.Do(req)
+			log.Printf("%v", resp)
+		}
+	}
+	return isTransacted
 }
 
 // TransactionPoolにTransactionを追加
@@ -329,7 +359,7 @@ type AmountResponse struct {
 	Amount float32 `json:"amount"`
 }
 
-func (ar AmountResponse) MarshalJSON() ([]byte, error) {
+func (ar *AmountResponse) MarshalJSON() ([]byte, error) {
 	return json.Marshal(struct {
 		Amount float32 `json:"amount"`
 	}{
