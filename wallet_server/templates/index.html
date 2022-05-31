@@ -50,7 +50,7 @@
           <h2 class="text-gray-900 text-lg mb-1 font-medium title-font">Wallet</h2>
           <p class="leading-relaxed mb-5 text-gray-600">
             <div id="wallet_amount">0</div>
-            <button class="inline-flex items-center bg-gray-100 border-0 py-1 px-3 focus:outline-none hover:bg-gray-200 rounded text-base mt-4 md:mt-0" id="reload_wallet">Reload Wallet</button>
+            <!-- <button class="inline-flex items-center bg-gray-100 border-0 py-1 px-3 focus:outline-none hover:bg-gray-200 rounded text-base mt-4 md:mt-0" id="reload_wallet">Reload Wallet</button> -->
           </p>
           <div class="relative mb-4">
             <label for="public_key" class="leading-7 text-sm text-gray-600">Public Key</label>
@@ -157,10 +157,13 @@
                   contentType: 'application/json',
                   data: JSON.stringify(transaction_data),
                   success: function (response) {
-                    console.log('Aaaaadsfdsafsadfasfsafd');
-                    console.log(JSON.stringify(transaction_data));
                       console.info(response);
-                      alert('Send success');
+                      if (response.message == 'fail') {
+                        alert('Send success')
+                      } else {
+                        alert('Send success');
+                      }
+                      
                   },
                   error: function (response) {
                       console.error(response);
@@ -187,9 +190,10 @@
             })
           }
 
-          $('#reload_wallet').click(function() {
-            reload_amount();
-          });
+          // $('#reload_wallet').click(function() {
+          //   reload_amount();
+          // });
+          setInterval(reload_amount, 3000)
         })
 
 
